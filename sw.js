@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smirt-pwa-v5'; // ⬆️ Fix doppia codifica JSONP
+const CACHE_NAME = 'smirt-pwa-v6'; // ⬆️ FORCE REFRESH - rimosso backup
 const urlsToCache = [
   './',
   './rapporti_intervento.V3.html',
