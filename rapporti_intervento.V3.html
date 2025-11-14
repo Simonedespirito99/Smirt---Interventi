@@ -710,7 +710,7 @@
                     const params = new URLSearchParams({
                         callback: callbackName,
                         action: 'save',
-                        data: encodeURIComponent(JSON.stringify(data))
+                        data: JSON.stringify(data)
                     });
                     
                     const fullUrl = `${SCRIPT_URL}?${params.toString()}`;
@@ -757,7 +757,7 @@
                     const params = new URLSearchParams({
                         callback: callbackName,
                         action: 'upload-signature',
-                        data: encodeURIComponent(JSON.stringify(uploadData))
+                        data: JSON.stringify(uploadData)
                     });
                     
                     const fullUrl = `${SCRIPT_URL}?${params.toString()}`;
