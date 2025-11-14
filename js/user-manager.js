@@ -17,8 +17,15 @@ class UserManager {
      */
     async loadUsers() {
         try {
-            // Prova a caricare dal file users.json
-            const response = await fetch('../users.json');
+            // Prova a caricare dal file users.json (path relativo alla root dell'app)
+            // Usa 'users.json' per risolvere correttamente su GitHub Pages e server statici
+            let response;
+            try {
+                response = await fetch('users.json');
+            } catch (err) {
+                // Fallback a percorso con ../ per compatibilità con versioni precedenti
+                response = await fetch('../users.json').catch(() => null);
+            }
             if (response.ok) {
                 const data = await response.json();
                 this.users.clear();
