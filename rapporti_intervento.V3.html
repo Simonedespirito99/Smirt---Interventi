@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="it"> <!-- Rimosso h-full da qui -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- META TAG PWA (per "Installazione") -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SMIRT">
+    <meta name="theme-color" content="#1f2937"> <!-- Grigio scuro per la barra di stato -->
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Icone PWA -->
+    <link rel="icon" type="image/svg+xml" href="./SMIRT_Icon_Final.svg">
+    <link rel="apple-touch-icon" href="./SMIRT_Icon_Final.svg">
+    <link rel="apple-touch-startup-image" href="./SMIRT_Icon_Final.svg">
+    <link rel="shortcut icon" href="./SMIRT_Icon_Final.svg">
+    <link rel="mask-icon" href="./SMIRT_Icon_Final.svg" color="#1f2937">
+    
+    <!-- Meta tag aggiuntivi per PWA -->
+    <meta name="application-name" content="SMIRT Reports">
+    <meta name="msapplication-TileColor" content="#1f2937">
+    <meta name="msapplication-TileImage" content="./SMIRT_Icon_Final.svg">
+    
+    <title>App Rapporti Intervento</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .signature-canvas {
+            border: 2px dashed #4b5563;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+            cursor: crosshair;
+            touch-action: none; 
+        }
+
+        #loading-overlay, #alert-modal, #new-intervento-modal {
+            display: none;
+        }
+
+        .app-section-visible {
+            display: block !important;
+        }
+        .app-flex-visible {
+            display: flex !important;
+        }
+        
+        .bozza-attiva {
+            background-color: #3b82f6 !important; /* Blu */
+            color: white !important;
+        }
+        
+        .button-loading {
+            cursor: not-allowed;
+            background-color: #9ca3af;
+        }
+        .button-loading:hover {
+            background-color: #9ca3af;
+        }
+        .spinner-sm {
+            display: inline-block;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid transparent;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #sidebar-menu {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(-100%);
+        }
+        #sidebar-menu.sidebar-open {
+            transform: translateX(0);
+        }
+        #sidebar-overlay {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<!-- MODIFICA: Rimosso 'h-full' e 'overflow-hidden'. Aggiunto 'min-h-screen' -->
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen">
+
+    <!-- SCHERMATA PRINCIPALE DELL'APP -->
+    <!-- MODIFICA: Rimosso 'h-full'. Aggiunto 'min-h-screen' -->
+    <div id="app-screen" class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <!-- MODIFICA: Aggiunto 'sticky top-0 z-20' per l'intestazione fissa -->
+        <header class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md flex-shrink-0 sticky top-0 z-20">
+            <!-- Pulsante per aprire il menu laterale -->
+            <button id="open-sidebar-button" class="flex items-center space-x-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+                <span class="font-bold text-xl">SMIRT</span>
+            </button>
+            <div class="flex items-center space-x-4">
+                <span id="current-user" class="text-sm text-gray-600 dark:text-gray-300"></span>
+                <button id="logout-btn" class="text-sm text-red-600 hover:text-red-800 px-3 py-1 border border-red-300 rounded-md hover:bg-red-50">
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Form Intervento -->
+        <!-- MODIFICA: Rimosso 'overflow-y-auto'. Mantenuto 'flex-1' per occupare lo spazio -->
+        <main class="flex-1 p-4">
+            <form id="intervento-form" class="space-y-6 max-w-4xl mx-auto">
+                <!-- Informazioni Generali -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Informazioni Generali
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">MUD *</label>
+                            <input id="mud" type="text" required
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Riferimento</label>
+                            <input id="riferimento" type="text"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Luogo *</label>
+                            <input id="luogo" type="text" required
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <!-- MODIFICATO: Due date separate invece di una singola -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Inizio *</label>
+                            <input id="data-inizio" type="date" required
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Fine *</label>
+                            <input id="data-fine" type="date" required
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Descrizione Lavoro -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z" clip-rule="evenodd"></path>
+                        </svg>
+                        Descrizione del Lavoro
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descrizione *</label>
+                            <textarea id="descrizione" required rows="4"
+                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Materiali Utilizzati</label>
+                            <textarea id="materiali" rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIMOSSA COMPLETAMENTE: Sezione Firma Tecnico -->
+
+                <!-- Firma Cliente/Committente -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
+                        </svg>
+                        Firma Committente *
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Firmi qui sotto:</label>
+                            <canvas id="firma-committente" class="signature-canvas w-full" height="150"></canvas>
+                            <div class="flex space-x-2 mt-2">
+                                <button type="button" id="clear-firma-committente" 
+                                        class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
+                                    Cancella
+                                </button>
+                                <span id="firma-committente-status" class="text-sm text-gray-500"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pulsanti Azione -->
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                    <button type="button" id="save-bozza"
+                            class="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 font-medium">
+                        💾 Salva Bozza
+                    </button>
+                    <button type="submit" id="submit-form"
+                            class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium">
+                        📨 Invia Rapporto
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <!-- 3. NUOVO MENU LATERALE (Nessuna modifica, 'position: fixed' è corretto) -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden"></div>
+    <div id="sidebar-menu" class="fixed inset-y-0 left-0 w-80 max-w-[calc(100%-2.5rem)] bg-gray-50 dark:bg-gray-800 shadow-xl z-40 p-4 flex flex-col">
+        <!-- Header Menu -->
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold">Menu</h2>
+            <button id="close-sidebar-button" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Contenuto Menu -->
+        <div class="flex-grow space-y-4 overflow-y-auto">
+            <!-- Nuovo Intervento -->
+            <button id="new-intervento-button" class="w-full px-4 py-3 font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Nuovo Intervento</span>
+            </button>
+            
+            <!-- Sezione Bozze -->
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Bozze Salvate</h3>
+                <div id="bozze-list" class="space-y-2">
+                    <!-- Le bozze verranno inserite qui dinamicamente -->
+                    <div class="text-gray-500 text-sm italic">
+                        Nessuna bozza salvata
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Footer Menu (Logout) -->
+        <div class="mt-4 flex-shrink-0 space-y-2">
+            <!-- Pulsante Installa App -->
+            <button id="install-app-button" class="w-full px-4 py-3 font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2 hidden">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Installa App</span>
+            </button>
+            
+            <!-- Istruzioni Installazione Mobile -->
+            <div id="mobile-install-instructions" class="bg-blue-50 dark:bg-blue-900 p-3 rounded-lg text-sm hidden">
+                <p class="font-semibold mb-2">📱 Installa come App:</p>
+                <ul class="space-y-1 text-blue-700 dark:text-blue-300">
+                    <li><strong>Chrome:</strong> Menu → "Installa app"</li>
+                    <li><strong>Safari:</strong> Condividi → "Aggiungi a Home"</li>
+                    <li><strong>Firefox:</strong> Menu → "Installa"</li>
+                </ul>
+            </div>
+            
+            <button id="logout-button" class="w-full px-4 py-3 font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Logout</span>
+            </button>
+        </div>
+    </div>
+
+
+    <!-- 4. OVERLAY DI CARICAMENTO (Nessuna modifica) -->
+    <div id="loading-overlay" class="fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-50">
+        <div class="text-white text-lg flex flex-col items-center">
+            <div class="spinner-sm mb-4"></div>
+            <div id="loading-text">Caricamento...</div>
+        </div>
+    </div>
+
+    <!-- 5. MODALE DI AVVISO / CONFERMA (Nessuna modifica) -->
+    <div id="alert-modal" class="fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
+            <div id="alert-content" class="text-center">
+                <div id="alert-icon" class="w-12 h-12 mx-auto mb-4"></div>
+                <h3 id="alert-title" class="text-xl font-bold mb-2"></h3>
+                <p id="alert-message" class="text-gray-600 dark:text-gray-400 mb-6"></p>
+                <div class="flex space-x-4">
+                    <button id="alert-cancel" class="flex-1 px-4 py-2 text-gray-500 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500">
+                        Annulla
+                    </button>
+                    <button id="alert-confirm" class="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                        Conferma
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 6. NUOVO MODALE PER ID INTERVENTO (Nessuna modifica) -->
+    <div id="new-intervento-modal" class="fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
+            <h3 class="text-xl font-bold mb-4 text-center">Nuovo Intervento</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID Intervento (MUD)</label>
+                    <input id="new-mud-input" type="text" placeholder="Inserisci MUD..."
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div class="flex space-x-4">
+                    <button id="new-intervento-cancel" class="flex-1 px-4 py-2 text-gray-500 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500">
+                        Annulla
+                    </button>
+                    <button id="new-intervento-confirm" class="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                        Crea
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Player audio nascosto per TTS -->
+    <audio id="audio-player" class="hidden"></audio>
+
+
+    <!-- Script per gestione utenti -->
+    <script src="./js/user-manager.js"></script>
+
+    <!-- SCRIPT PRINCIPALE DELL'APP -->
+    <script>
+        // Controllo autenticazione all'avvio
+        (async () => {
+            await userManager.loadUsers();
+            
+            if (!userManager.isSessionValid()) {
+                // Utente non autenticato, reindirizza alla pagina di login
+                window.location.href = 'index.html';
+                throw new Error('Non autenticato'); // Ferma l'esecuzione dello script
+            }
+        })();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // === CONFIGURAZIONE ===
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSHQ8agvGPd3fcbulTHSwCKaBjUkeASm1lOxKqsCX1Wc-qQ7zSu4agqf1Qz4C9ME4z/exec'; // ✅ NUOVO DEPLOYMENT
+            console.log('🔗 Google Apps Script URL:', SCRIPT_URL);
+            
+            // === MAPPATURA UTENTI PER BUONI LAVORO ===
+            const USER_CODE_MAPPING = {
+                'admin': 'A',
+                'tecnico1': 'T',
+                'tecnico2': 'U',
+                'valentino': 'V'
+            };
+
+            // === ELEMENTI DOM ===
+            const appScreen = document.getElementById('app-screen');
+            const currentUser = document.getElementById('current-user');
+            const logoutBtn = document.getElementById('logout-btn');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+
+            // Form elements
+            const interventoForm = document.getElementById('intervento-form');
+            const mudInput = document.getElementById('mud');
+            const riferimentoInput = document.getElementById('riferimento'); 
+            const luogoInput = document.getElementById('luogo');
+            const dataInizioInput = document.getElementById('data-inizio'); // NUOVO
+            const dataFineInput = document.getElementById('data-fine');     // NUOVO
+            const descrizioneInput = document.getElementById('descrizione');
+            const materialiInput = document.getElementById('materiali');
+
+            // Canvas per firme
+            const canvasCommittente = document.getElementById('firma-committente');
+            const ctxCommittente = canvasCommittente.getContext('2d', { willReadFrequently: true }); // ✅ Risolve Canvas2D warning
+            const clearCommittente = document.getElementById('clear-firma-committente');
+            const statusCommittente = document.getElementById('firma-committente-status');
+
+            // Pulsanti
+            const saveBozzaButton = document.getElementById('save-bozza');
+            const submitButton = document.getElementById('submit-form');
+
+            // Sidebar
+            const openSidebarButton = document.getElementById('open-sidebar-button');
+            const closeSidebarButton = document.getElementById('close-sidebar-button');
+            const sidebarMenu = document.getElementById('sidebar-menu');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const newInterventoButton = document.getElementById('new-intervento-button');
+            const bozzeList = document.getElementById('bozze-list');
+
+            // Modali
+            const alertModal = document.getElementById('alert-modal');
+            const newInterventoModal = document.getElementById('new-intervento-modal');
+            const newMudInput = document.getElementById('new-mud-input');
+            const newInterventoCancel = document.getElementById('new-intervento-cancel');
+            const newInterventoConfirm = document.getElementById('new-intervento-confirm');
+
+            // PWA
+            const installAppButton = document.getElementById('install-app-button');
+            const mobileInstallInstructions = document.getElementById('mobile-install-instructions');
+
+            // === STATO APPLICAZIONE ===
+            let currentUsername = '';
+            let currentDraft = null;
+            let isDrawingCommittente = false;
+
+            // === FUNZIONI UTILITÀ ===
+            function showLoading(message = 'Caricamento...') {
+                loadingText.textContent = message;
+                loadingOverlay.classList.add('app-flex-visible');
+            }
+
+            function hideLoading() {
+                loadingOverlay.classList.remove('app-flex-visible');
+            }
+
+            function showAlert(title, message, icon = '⚠️') {
+                document.getElementById('alert-title').textContent = title;
+                document.getElementById('alert-message').textContent = message;
+                document.getElementById('alert-icon').textContent = icon;
+                alertModal.classList.add('app-flex-visible');
+                
+                // Auto-chiusura dopo 3 secondi
+                setTimeout(() => hideAlert(), 3000);
+            }
+
+            function hideAlert() {
+                alertModal.classList.remove('app-flex-visible');
+            }
+
+            function getCurrentDate() {
+                return new Date().toISOString().split('T')[0];
+            }
+
+            // === GESTIONE CANVAS FIRME ===
+            function setupCanvas(canvas, ctx, clearButton, statusElement) {
+                let isDrawing = false;
+                let lastX = 0;
+                let lastY = 0;
+
+                // Funzione per ottenere coordinate corrette
+                function getEventPos(e, canvas) {
+                    const rect = canvas.getBoundingClientRect();
+                    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                    
+                    return {
+                        x: (clientX - rect.left) * (canvas.width / rect.width),
+                        y: (clientY - rect.top) * (canvas.height / rect.height)
+                    };
+                }
+
+                // Imposta dimensioni canvas
+                function resizeCanvas() {
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                }
+
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+
+                // Eventi mouse
+                canvas.addEventListener('mousedown', (e) => {
+                    isDrawing = true;
+                    const pos = getEventPos(e, canvas);
+                    lastX = pos.x;
+                    lastY = pos.y;
+                });
+
+                canvas.addEventListener('mousemove', (e) => {
+                    if (!isDrawing) return;
+                    const pos = getEventPos(e, canvas);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                    
+                    lastX = pos.x;
+                    lastY = pos.y;
+                    
+                    updateSignatureStatus(statusElement, true);
+                });
+
+                canvas.addEventListener('mouseup', () => {
+                    isDrawing = false;
+                });
+
+                // Eventi touch
+                canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    isDrawing = true;
+                    const pos = getEventPos(e, canvas);
+                    lastX = pos.x;
+                    lastY = pos.y;
+                });
+
+                canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    if (!isDrawing) return;
+                    const pos = getEventPos(e, canvas);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                    
+                    lastX = pos.x;
+                    lastY = pos.y;
+                    
+                    updateSignatureStatus(statusElement, true);
+                });
+
+                canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    isDrawing = false;
+                });
+
+                // Pulsante cancella
+                clearButton.addEventListener('click', () => {
+                    clearSignature(ctx, statusElement);
+                });
+            }
+
+            function clearSignature(ctx, statusElement) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                updateSignatureStatus(statusElement, false);
+            }
+
+            function updateSignatureStatus(statusElement, hasFirma) {
+                statusElement.textContent = hasFirma ? '✅ Firma presente' : '';
+                statusElement.style.color = hasFirma ? 'green' : '';
+            }
+
+            function isCanvasEmpty(canvas) {
+                const ctx = canvas.getContext('2d');
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                return !imgData.data.some(channel => channel !== 0);
+            }
+
+            function canvasToDataURL(canvas) {
+                return canvas.toDataURL('image/png');
+            }
+
+            // === GESTIONE BOZZE ===
+            function saveDraft() {
+                if (!mudInput.value.trim()) {
+                    showAlert('Errore', 'Inserisci un MUD per salvare la bozza', '⚠️');
+                    return;
+                }
+
+                const draftData = {
+                    id: mudInput.value.trim(),
+                    user: currentUsername,
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        mud: mudInput.value.trim(),
+                        riferimento: riferimentoInput.value.trim(), 
+                        luogo: luogoInput.value.trim(),
+                        dataInizio: dataInizioInput.value,  // MODIFICATO
+                        dataFine: dataFineInput.value,      // MODIFICATO
+                        descrizione: descrizioneInput.value.trim(),
+                        materiali: materialiInput.value.trim(),
+                        firmaCommittente: isCanvasEmpty(canvasCommittente) ? null : canvasToDataURL(canvasCommittente)
+                    }
+                };
+
+                // Salva in localStorage
+                const drafts = JSON.parse(localStorage.getItem('smirt_drafts') || '{}');
+                drafts[draftData.id] = draftData;
+                localStorage.setItem('smirt_drafts', JSON.stringify(drafts));
+
+                currentDraft = draftData;
+                loadSavedDrafts();
+                showAlert('Successo', 'Bozza salvata con successo', '✅');
+            }
+
+            function loadDraft(draftId) {
+                const drafts = JSON.parse(localStorage.getItem('smirt_drafts') || '{}');
+                const draft = drafts[draftId];
+                
+                if (draft) {
+                    mudInput.value = draft.data.mud || '';
+                    riferimentoInput.value = draft.data.riferimento || '';
+                    luogoInput.value = draft.data.luogo || '';
+                    dataInizioInput.value = draft.data.dataInizio || getCurrentDate();  // MODIFICATO
+                    dataFineInput.value = draft.data.dataFine || getCurrentDate();      // MODIFICATO
+                    descrizioneInput.value = draft.data.descrizione || '';
+                    materialiInput.value = draft.data.materiali || '';
+                    
+                    // Carica firme se presenti
+                    if (draft.data.firmaCommittente) {
+                        loadSignatureFromDataURL(canvasCommittente, draft.data.firmaCommittente);
+                        updateSignatureStatus(statusCommittente, true);
+                    }
+                    
+                    currentDraft = draft;
+                    closeSidebar();
+                }
+            }
+
+            function deleteDraft(draftId) {
+                const drafts = JSON.parse(localStorage.getItem('smirt_drafts') || '{}');
+                delete drafts[draftId];
+                localStorage.setItem('smirt_drafts', JSON.stringify(drafts));
+                
+                if (currentDraft && currentDraft.id === draftId) {
+                    currentDraft = null;
+                }
+                
+                loadSavedDrafts();
+            }
+
+            function loadSavedDrafts() {
+                const drafts = JSON.parse(localStorage.getItem('smirt_drafts') || '{}');
+                const userDrafts = Object.values(drafts).filter(draft => draft.user === currentUsername);
+                
+                bozzeList.innerHTML = '';
+                
+                if (userDrafts.length === 0) {
+                    bozzeList.innerHTML = '<div class="text-gray-500 text-sm italic">Nessuna bozza salvata</div>';
+                    return;
+                }
+                
+                userDrafts.forEach(draft => {
+                    const draftElement = document.createElement('div');
+                    draftElement.className = `p-3 bg-white dark:bg-gray-700 rounded-lg border hover:border-blue-500 cursor-pointer ${currentDraft && currentDraft.id === draft.id ? 'bozza-attiva' : ''}`;
+                    
+                    draftElement.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="font-medium text-sm">${draft.data.mud}</div>
+                                <div class="text-xs text-gray-500 mt-1">${new Date(draft.timestamp).toLocaleString()}</div>
+                                <div class="text-xs text-gray-600 mt-1">${draft.data.luogo || 'Nessun luogo'}</div>
+                            </div>
+                            <button class="text-red-500 hover:text-red-700 ml-2" onclick="deleteDraft('${draft.id}')">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    
+                    draftElement.addEventListener('click', (e) => {
+                        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'svg' && e.target.tagName !== 'path') {
+                            loadDraft(draft.id);
+                        }
+                    });
+                    
+                    bozzeList.appendChild(draftElement);
+                });
+            }
+
+            function loadSignatureFromDataURL(canvas, dataURL) {
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = dataURL;
+            }
+
+            // === GESTIONE SIDEBAR ===
+            function openSidebar() {
+                sidebarOverlay.classList.remove('hidden');
+                sidebarMenu.classList.add('sidebar-open');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                sidebarOverlay.classList.add('hidden');
+                sidebarMenu.classList.remove('sidebar-open');
+                document.body.style.overflow = '';
+            }
+
+            async function submitDataToServer(data) {
+                return new Promise((resolve, reject) => {
+                    const callbackName = 'jsonpCallback' + Date.now();
+                    let timeoutId;
+                    
+                    window[callbackName] = function(response) {
+                        clearTimeout(timeoutId);
+                        delete window[callbackName];
+                        if (script && script.parentNode) document.head.removeChild(script);
+                        resolve(response);
+                    };
+                    
+                    const script = document.createElement('script');
+                    const params = new URLSearchParams({
+                        callback: callbackName,
+                        action: 'save',
+                        data: encodeURIComponent(JSON.stringify(data))
+                    });
+                    
+                    const fullUrl = `${SCRIPT_URL}?${params.toString()}`;
+                    script.src = fullUrl;
+                    
+                    script.onerror = (error) => {
+                        clearTimeout(timeoutId);
+                        delete window[callbackName];
+                        if (script && script.parentNode) document.head.removeChild(script);
+                        reject(new Error('Errore di connessione. Controlla: 1) Connessione internet 2) URL Google Apps Script 3) Permessi script'));
+                    };
+                    
+                    document.head.appendChild(script);
+                    
+                    timeoutId = setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (script && script.parentNode) document.head.removeChild(script);
+                            reject(new Error('Timeout (30s). Il Google Apps Script non risponde. Verifica che sia pubblicato e accessibile.'));
+                        }
+                    }, 30000);
+                });
+            }
+
+            async function uploadSignatureToServer(mud, signatureType, signatureBase64) {
+                return new Promise((resolve, reject) => {
+                    const callbackName = 'jsonpCallback' + Date.now();
+                    let timeoutId;
+                    
+                    window[callbackName] = function(response) {
+                        clearTimeout(timeoutId);
+                        delete window[callbackName];
+                        if (script && script.parentNode) document.head.removeChild(script);
+                        resolve(response);
+                    };
+                    
+                    const script = document.createElement('script');
+                    const uploadData = {
+                        mud: mud,
+                        signatureType: signatureType,
+                        signatureBase64: signatureBase64
+                    };
+                    
+                    const params = new URLSearchParams({
+                        callback: callbackName,
+                        action: 'upload-signature',
+                        data: encodeURIComponent(JSON.stringify(uploadData))
+                    });
+                    
+                    const fullUrl = `${SCRIPT_URL}?${params.toString()}`;
+                    script.src = fullUrl;
+                    
+                    script.onerror = (error) => {
+                        clearTimeout(timeoutId);
+                        delete window[callbackName];
+                        if (script && script.parentNode) document.head.removeChild(script);
+                        reject(new Error('Errore upload firma. Controlla: 1) Dimensione firma 2) Connessione 3) Permessi Google Drive'));
+                    };
+                    
+                    document.head.appendChild(script);
+                    
+                    timeoutId = setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (script && script.parentNode) document.head.removeChild(script);
+                            reject(new Error('Timeout upload firma (30s). La firma potrebbe essere troppo grande o il servizio non risponde.'));
+                        }
+                    }, 30000);
+                });
+            }
+
+            // === FUNZIONE PRINCIPALE SUBMIT ===
+            async function submitFormData() {
+                // Validazione campi obbligatori
+                if (!mudInput.value.trim()) {
+                    showAlert('Errore', 'Il campo MUD è obbligatorio', '⚠️');
+                    return false;
+                }
+                if (!luogoInput.value.trim()) {
+                    showAlert('Errore', 'Il campo Luogo è obbligatorio', '⚠️');
+                    return false;
+                }
+                if (!dataInizioInput.value) {
+                    showAlert('Errore', 'Il campo Data Inizio è obbligatorio', '⚠️');
+                    return false;
+                }
+                if (!dataFineInput.value) {
+                    showAlert('Errore', 'Il campo Data Fine è obbligatorio', '⚠️');
+                    return false;
+                }
+                if (!descrizioneInput.value.trim()) {
+                    showAlert('Errore', 'Il campo Descrizione è obbligatorio', '⚠️');
+                    return false;
+                }
+
+                // Validazione date
+                const dataInizio = new Date(dataInizioInput.value);
+                const dataFine = new Date(dataFineInput.value);
+                if (dataFine < dataInizio) {
+                    showAlert('Errore', 'La data fine non può essere precedente alla data inizio', '⚠️');
+                    return false;
+                }
+
+                // Validazione firma committente
+                if (isCanvasEmpty(canvasCommittente)) {
+                    showAlert('Errore', 'La firma del committente è obbligatoria', '⚠️');
+                    return false;
+                }
+
+                try {
+                    showLoading('Invio rapporto in corso...');
+
+                    // Prepara i dati SENZA firma (FASE 1)
+                    const formData = {
+                        user: currentUsername,
+                        mud: mudInput.value.trim(),
+                        riferimento: riferimentoInput.value.trim(),
+                        luogo: luogoInput.value.trim(),
+                        dataInizio: dataInizioInput.value,
+                        dataFine: dataFineInput.value,
+                        descrizione: descrizioneInput.value.trim(),
+                        materiali: materialiInput.value.trim()
+                        // firmaCommittente verrà inviata separatamente nella FASE 2
+                    };
+                    
+                    // Prepara la firma per la FASE 2
+                    const firmaCommittenteBase64 = canvasToDataURL(canvasCommittente);
+
+                    console.log('📤 Invio dati:', formData);
+                    console.log('🔗 URL configurato:', SCRIPT_URL);
+
+                    // FASE 1: Invio dati principali
+                    showLoading('Invio dati principali...');
+                    const response1 = await submitDataToServer(formData);
+                    if (response1.status !== 'success') {
+                        throw new Error(response1.message || 'Errore invio dati principali');
+                    }
+
+                    // FASE 2: Upload firma committente
+                    showLoading('Caricamento firma committente...');
+                    const response2 = await uploadSignatureToServer(formData.mud, 'committente', firmaCommittenteBase64);
+                    if (response2.status !== 'success') {
+                        throw new Error(response2.message || 'Errore caricamento firma committente');
+                    }
+                    
+                    const result = response1.buonoLavoro ? response1 : response2;
+                    hideLoading();
+
+                    // Mostra il buono di lavoro generato
+                    let successMessage = 'Rapporto inviato con successo!';
+                    if (result.buonoLavoro) {
+                        successMessage += `\n\nBuono di Lavoro: ${result.buonoLavoro}`;
+                    }
+
+                    showAlert('Successo', successMessage, '✅');
+
+                    // Rimuovi la bozza se esistente
+                    if (currentDraft) {
+                        deleteDraft(currentDraft.id);
+                        currentDraft = null;
+                    }
+
+                    // Reset form
+                    interventoForm.reset();
+                    clearSignature(ctxCommittente, statusCommittente);
+                    
+                    // Reimposta date
+                    const today = getCurrentDate();
+                    dataInizioInput.value = today;
+                    dataFineInput.value = today;
+
+                    return true;
+
+                } catch (error) {
+                    hideLoading();
+                    console.error('❌ Errore invio:', error.message);
+                    showAlert('Errore', 'Errore durante invio: ' + error.message, '❌');
+                    return false;
+                }
+            }
+
+            // === GESTIONE NUOVO INTERVENTO ===
+            function showNewInterventoModal() {
+                newMudInput.value = '';
+                newInterventoModal.classList.add('app-flex-visible');
+            }
+
+            function hideNewInterventoModal() {
+                newInterventoModal.classList.remove('app-flex-visible');
+            }
+
+            function createNewIntervento() {
+                const newMud = newMudInput.value.trim();
+                if (!newMud) {
+                    showAlert('Errore', 'Inserisci un ID intervento valido', '⚠️');
+                    return;
+                }
+
+                // Reset form
+                interventoForm.reset();
+                clearSignature(ctxCommittente, statusCommittente);
+                
+                // Imposta nuovo MUD
+                mudInput.value = newMud;
+                
+                // Imposta date correnti
+                const today = getCurrentDate();
+                dataInizioInput.value = today;  // MODIFICATO
+                dataFineInput.value = today;    // MODIFICATO
+                
+                currentDraft = null;
+                hideNewInterventoModal();
+                closeSidebar();
+            }
+
+            // === EVENT LISTENERS ===
+            
+            // Mostra utente corrente e configura logout
+            const currentUserData = userManager.getCurrentUser();
+            currentUsername = currentUserData.username || 'utente'; // ✅ CORREZIONE: Imposta currentUsername
+            currentUser.textContent = `Connesso: ${currentUserData.displayName || currentUserData.username || 'Utente'} (${currentUserData.role || 'utente'})`;
+            
+            // Logout button
+            logoutBtn.addEventListener('click', () => {
+                if (confirm('Sei sicuro di voler uscire?')) {
+                    userManager.logout();
+                    window.location.href = 'index.html';
+                }
+            });
+
+            // === INIZIALIZZAZIONE DIRETTA APP ===
+            // Inizializza data corrente
+            const today = getCurrentDate();
+            dataInizioInput.value = today;
+            dataFineInput.value = today;
+            
+            // Carica bozze salvate
+            loadSavedDrafts();
+
+            // Canvas setup
+            setupCanvas(canvasCommittente, ctxCommittente, clearCommittente, statusCommittente);
+
+            // Form submission
+            interventoForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                submitFormData();
+            });
+
+            // Pulsanti
+            saveBozzaButton.addEventListener('click', saveDraft);
+
+            // Sidebar
+            openSidebarButton.addEventListener('click', openSidebar);
+            closeSidebarButton.addEventListener('click', closeSidebar);
+            sidebarOverlay.addEventListener('click', closeSidebar);
+
+            // Nuovo intervento
+            newInterventoButton.addEventListener('click', showNewInterventoModal);
+            newInterventoCancel.addEventListener('click', hideNewInterventoModal);
+            newInterventoConfirm.addEventListener('click', createNewIntervento);
+
+            // Modal alerts
+            document.getElementById('alert-cancel').addEventListener('click', hideAlert);
+            document.getElementById('alert-confirm').addEventListener('click', hideAlert);
+
+            // Chiusura modal con Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hideAlert();
+                    hideNewInterventoModal();
+                    closeSidebar();
+                }
+            });
+
+            // Funzioni globali per eliminazione bozze (chiamate da HTML dinamico)
+            window.deleteDraft = deleteDraft;
+
+            console.log('🚀 App SMIRT inizializzata con successo');
+            console.log('📝 Codici buono lavoro:', USER_CODE_MAPPING);
+
+        });
+        
+        // === PWA GESTIONE AVANZATA ===
+        // Gestione completa dell'installazione PWA per tutte le piattaforme
+        
+        let deferredPrompt = null;
+        let installPromptShown = false;
+        
+        // Rileva tipo di device e browser
+        function detectPlatform() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isIOS = /iphone|ipad|ipod/.test(userAgent);
+            const isAndroid = /android/.test(userAgent);
+            const isChrome = /chrome/.test(userAgent) && !/edge/.test(userAgent);
+            const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent);
+            const isFirefox = /firefox/.test(userAgent);
+            
+            return {
+                isIOS,
+                isAndroid, 
+                isChrome,
+                isSafari,
+                isFirefox,
+                isMobile: isIOS || isAndroid
+            };
+        }
+        
+        function isInStandaloneMode() {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   window.navigator.standalone === true;
+        }
+        
+        function showInstallPrompt() {
+            const platform = detectPlatform();
+            const installAppButton = document.getElementById('install-app-button');
+            const mobileInstallInstructions = document.getElementById('mobile-install-instructions');
+            
+            // Se è già in modalità standalone, nascondi tutto
+            if (isInStandaloneMode()) {
+                installAppButton.classList.add('hidden');
+                mobileInstallInstructions.classList.add('hidden');
+                return;
+            }
+            
+            // Su desktop Chrome/Edge o quando c'è il prompt nativo
+            if (deferredPrompt && !platform.isMobile) {
+                installAppButton.classList.remove('hidden');
+                mobileInstallInstructions.classList.add('hidden');
+            }
+            // Su mobile, mostra istruzioni specifiche
+            else if (platform.isMobile) {
+                installAppButton.classList.add('hidden');
+                mobileInstallInstructions.classList.remove('hidden');
+            }
+            // Altrimenti nascondi tutto
+            else {
+                installAppButton.classList.add('hidden');
+                mobileInstallInstructions.classList.add('hidden');
+            }
+        }
+        
+        // Gestisce il prompt automatico di installazione
+        window.addEventListener('beforeinstallprompt', (e) => {
+            try {
+                console.log('📱 PWA: Prompt installazione disponibile');
+                e.preventDefault();
+                deferredPrompt = e;
+                showInstallPrompt();
+            } catch (error) {
+                console.warn('📱 PWA: Errore gestione beforeinstallprompt:', error);
+            }
+        });
+        
+        // Click sul pulsante installa
+        const installAppButton = document.getElementById('install-app-button');
+        if (installAppButton) {
+            installAppButton.addEventListener('click', async () => {
+                try {
+                    if (deferredPrompt) {
+                        console.log('📱 PWA: Avvio installazione...');
+                        deferredPrompt.prompt();
+                        
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log('📱 PWA: Scelta utente:', outcome);
+                        
+                        if (outcome === 'accepted') {
+                            console.log('📱 PWA: Installazione accettata');
+                        } else {
+                            console.log('📱 PWA: Installazione rifiutata');
+                        }
+                        
+                        deferredPrompt = null;
+                        installAppButton.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('📱 PWA: Errore durante installazione:', error);
+                }
+            });
+        }
+        
+        // Rileva quando l'app è stata installata
+        window.addEventListener('appinstalled', () => {
+            try {
+                console.log('📱 PWA: App installata con successo');
+                deferredPrompt = null;
+                
+                const installAppButton = document.getElementById('install-app-button');
+                const mobileInstallInstructions = document.getElementById('mobile-install-instructions');
+                
+                if (installAppButton) installAppButton.classList.add('hidden');
+                if (mobileInstallInstructions) mobileInstallInstructions.classList.add('hidden');
+            } catch (error) {
+                console.warn('📱 PWA: Errore gestione appinstalled:', error);
+            }
+        });
+        
+        // Mostra prompt di installazione quando appropriato
+        function checkAndShowInstallPrompt() {
+            const platform = detectPlatform();
+            
+            // Non mostrare il prompt se è già installata o è stata mostrata di recente
+            if (isInStandaloneMode() || installPromptShown) {
+                console.log('📱 PWA: Già installata o prompt già mostrato');
+                return;
+            }
+            
+            console.log('📱 PWA: Controllo installazione...', {
+                platform: platform,
+                deferredPrompt: !!deferredPrompt,
+                isStandalone: isInStandaloneMode()
+            });
+            
+            // Su mobile, mostra sempre le istruzioni dopo un po'
+            if (platform.isMobile) {
+                setTimeout(() => {
+                    if (!installPromptShown && !isInStandaloneMode()) {
+                        console.log('📱 PWA: Mostro istruzioni mobile');
+                        showInstallPrompt();
+                        installPromptShown = true;
+                    }
+                }, 5000); // Dopo 5 secondi invece di 10
+            }
+            // Su desktop, mostra istruzioni anche senza deferredPrompt dopo un po'
+            else {
+                setTimeout(() => {
+                    if (!installPromptShown && !deferredPrompt && !isInStandaloneMode()) {
+                        console.log('📱 PWA: Mostro istruzioni desktop (fallback)');
+                        const mobileInstallInstructions = document.getElementById('mobile-install-instructions');
+                        if (mobileInstallInstructions) {
+                            mobileInstallInstructions.classList.remove('hidden');
+                            installPromptShown = true;
+                        }
+                    }
+                }, 8000); // Dopo 8 secondi
+            }
+        }
+        
+        // Chiama la funzione di controllo dopo l'inizializzazione
+        function initializePWA() {
+            setTimeout(() => {
+                showInstallPrompt();
+                checkAndShowInstallPrompt();
+            }, 2000);
+        }
+        
+        // === PWA SERVICE WORKER REGISTRATION ===
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((registration) => {
+                        console.log('🔧 Service Worker registrato:', registration.scope);
+                        
+                        // Gestisce aggiornamenti del service worker
+                        registration.addEventListener('updatefound', () => {
+                            console.log('🔄 Service Worker: Aggiornamento trovato');
+                            const newWorker = registration.installing;
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('✅ Service Worker: Nuovo contenuto disponibile');
+                                    // Opzionalmente mostra notifica di aggiornamento
+                                }
+                            });
+                        });
+                        
+                        initializePWA();
+                    })
+                    .catch((error) => {
+                        console.error('❌ Service Worker registrazione fallita:', error);
+                    });
+            });
+        } else {
+            console.warn('⚠️ Service Worker non supportato');
+            initializePWA();
+        }
+    </script>
+</body>
+</html>
