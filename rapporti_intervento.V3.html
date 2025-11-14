@@ -356,9 +356,12 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             // === CONFIGURAZIONE ===
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSHQ8agvGPd3fcbulTHSwCKaBjUkeASm1lOxKqsCX1Wc-qQ7zSu4agqf1Qz4C9ME4z/exec'; // ✅ NUOVO DEPLOYMENT
+            const SCRIPT_BASE = 'https://script.google.com/macros/s/';
+            const SCRIPT_ID = 'AKfycbwSHQ8agvGPd3fcbulTHSwCKaBjUkeASm1lOxKqsCX1Wc-qQ7zSu4agqf1Qz4C9ME4z';
+            const SCRIPT_URL = SCRIPT_BASE + SCRIPT_ID + '/exec';
             console.log('🔗 Google Apps Script URL:', SCRIPT_URL);
-            console.log('🕒 VERSION: 2025-11-14-14:35 - DOPPIA CODIFICA RIMOSSA');
+            console.log('🔗 URL Length:', SCRIPT_URL.length);
+            console.log('🕒 VERSION: 2025-11-14-14:40 - URL RICOSTRUITO IN PARTI');
             
             // === MAPPATURA UTENTI PER BUONI LAVORO ===
             const USER_CODE_MAPPING = {
