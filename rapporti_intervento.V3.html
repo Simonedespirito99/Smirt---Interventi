@@ -711,7 +711,7 @@
                     };
                     
                     const script = document.createElement('script');
-                    const fullUrl = `${SCRIPT_URL}?callback=${callbackName}&action=save&data=${JSON.stringify(data)}`;
+                    const fullUrl = `${SCRIPT_URL}?callback=${callbackName}&action=save&data=${encodeURIComponent(JSON.stringify(data))}`;
                     script.src = fullUrl;
                     
                     script.onerror = (error) => {
@@ -752,7 +752,7 @@
                         signatureBase64: signatureBase64
                     };
                     
-                    const fullUrl = `${SCRIPT_URL}?callback=${callbackName}&action=upload-signature&data=${JSON.stringify(uploadData)}`;
+                    const fullUrl = `${SCRIPT_URL}?callback=${callbackName}&action=upload-signature&data=${encodeURIComponent(JSON.stringify(uploadData))}`;
                     script.src = fullUrl;
                     
                     script.onerror = (error) => {
