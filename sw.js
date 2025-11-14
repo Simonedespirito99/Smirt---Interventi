@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smirt-pwa-v3'; // ⬆️ Incrementato per correzioni errori
+const CACHE_NAME = 'smirt-pwa-v4'; // ⬆️ Incrementato per signatures system
 const urlsToCache = [
   './',
   './rapporti_intervento.V3.html',
@@ -6,6 +6,8 @@ const urlsToCache = [
   './manifest.json',
   './SMIRT_Icon_Final.svg',
   './js/user-manager.js',
+  './js/signatures.js',
+  './test-signatures.html',
   './users.json'
 ];
 
