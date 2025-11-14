@@ -6,7 +6,7 @@ const urlsToCache = [
   './manifest.json',
   './SMIRT_Icon_Final.svg',
   './js/user-manager.js',
-  './config/users.json'
+  './users.json'
 ];
 
 // Install event - cache resources with better error handling
