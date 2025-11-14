@@ -361,7 +361,7 @@
             const SCRIPT_URL = SCRIPT_BASE + SCRIPT_ID + '/exec';
             console.log('🔗 Google Apps Script URL:', SCRIPT_URL);
             console.log('🔗 URL Length:', SCRIPT_URL.length);
-            console.log('🕒 VERSION: 2025-11-14-15:00 - BACKUP RIMOSSO - FORCE REFRESH');
+            console.log('🕒 VERSION: 2025-11-14-15:05 - DEBUG JSONP CON LOG URL');
             
             // === MAPPATURA UTENTI PER BUONI LAVORO ===
             const USER_CODE_MAPPING = {
@@ -711,7 +711,11 @@
                     };
                     
                     const script = document.createElement('script');
+                    script.async = true;
+                    script.defer = true;
+                    
                     const fullUrl = `${SCRIPT_URL}?callback=${callbackName}&action=save&data=${encodeURIComponent(JSON.stringify(data))}`;
+                    console.log('🚀 CHIAMATA URL:', fullUrl);
                     script.src = fullUrl;
                     
                     script.onerror = (error) => {
