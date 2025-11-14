@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smirt-pwa-v4'; // ⬆️ Incrementato per signatures system
+const CACHE_NAME = 'smirt-pwa-v5'; // ⬆️ Fix doppia codifica JSONP
 const urlsToCache = [
   './',
   './rapporti_intervento.V3.html',
