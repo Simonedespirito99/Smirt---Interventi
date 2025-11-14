@@ -5,7 +5,7 @@
  */
 
 // ⚠️ IMPORTANTE: Sostituisci questo URL con l'URL del tuo Web App dopo il deploy
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/SOSTITUISCI_CON_TUO_URL/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxU8YVhPJ9v3ByAzwFM8EfZcNMRLFbvW-iEzWJYkzR4iJVHu-ZJVAiMdE8xr9J7qw/exec';
 
 // Timeout per chiamate JSONP (millisecondi)
 const JSONP_TIMEOUT = 20000;
