@@ -999,23 +999,11 @@
 
             // === FUNZIONI HELPER ===
             function getCurrentInterventoType() {
-                // Determina se è MUD o Ordinario basandosi sul CONTENUTO del campo MUD
+                // ✅ LOGICA CORRETTA: Semplice e funzionale
+                // - Se c'è valore nel campo MUD → è MUD
+                // - Se campo MUD è vuoto → è Ordinario  
                 const mudValue = mudInput.value.trim();
-                
-                if (!mudValue) {
-                    // Se campo MUD vuoto, probabilmente è ordinario
-                    return 'ordinario';
-                }
-                
-                // Analizza il contenuto per determinare il tipo
-                if (mudValue.startsWith('ORD-')) {
-                    return 'ordinario';
-                } else if (mudValue.startsWith('MUD-') || mudValue.includes('MUD')) {
-                    return 'mud';
-                } else {
-                    // Fallback: se non è chiaro dal prefisso, considera MUD
-                    return 'mud';
-                }
+                return mudValue ? 'mud' : 'ordinario';
             }
 
             // === FUNZIONE PRINCIPALE SUBMIT ===
